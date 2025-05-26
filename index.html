@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Títulos Financeiros</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles for input masks and datepicker */
+        .datepicker {
+            position: relative;
+        }
+        .datepicker input {
+            padding-right: 2.5rem;
+        }
+        .datepicker:after {
+            content: '\f073';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            pointer-events: none;
+        }
+        
+        /* Animation for modals */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        /* Status colors */
+        .status-aguardando {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+        
+        .status-quitado {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        
+        .status-devolvido {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .status-repassado {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        
+        /* Card hover effect */
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Responsive table */
+        @media (max-width: 768px) {
+            .responsive-table thead {
+                display: none;
+            }
+            
+            .responsive-table tr {
+                display: block;
+                margin-bottom: 1rem;
+                border-radius: 0.375rem;
+                box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            }
+            
+            .responsive-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.75rem;
+                text-align: right;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            
+            .responsive-table td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #4b5563;
+                margin-right: auto;
+                padding-right: 1rem;
+                text-align: left;
+            }
+            
+            .responsive-table td:last-child {
+                border-bottom: 0;
+            }
+            
+            .responsive-table .actions-cell {
+                justify-content: flex-end;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">Controle de Títulos</h1>
+                    <p class="text-gray-600">Gerencie boletos, cheques e outros títulos financeiros</p>
+                </div>
+                <button id="openAddModalBtn" class="mt-4 md:mt-0 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    <i class="fas fa-plus-circle mr-2"></i> Novo Título
+                </button>
+            </div>
+        </header>
+        
+        <!-- Dashboard Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Titles Card -->
+            <div class="bg-white rounded-lg shadow-md p-6 card-hover transition-all duration-200">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                        <i class="fas fa-file-invoice-dollar text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total de Títulos Ativos</p>
+                        <h3 id="totalTitles" class="text-2xl font-semibold text-gray-800">0</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Total Amount Card -->
+            <div class="bg-white rounded-lg shadow-md p-6 card-hover transition-all duration-200">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                        <i class="fas fa-money-bill-wave text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Valor Total Ativo</p>
+                        <h3 id="totalAmount" class="text-2xl font-semibold text-gray-800">R$ 0,00</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Titles by Status Count Card -->
+            <div class="bg-white rounded-lg shadow-md p-6 card-hover transition-all duration-200">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                        <i class="fas fa-chart-pie text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Títulos Aguardando</p>
+                        <h3 id="titlesByStatusCount" class="text-2xl font-semibold text-gray-800">0</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Amount by Status Card -->
+            <div class="bg-white rounded-lg shadow-md p-6 card-hover transition-all duration-200">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                        <i class="fas fa-chart-bar text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Valor Aguardando</p>
+                        <h3 id="amountByStatus" class="text-2xl font-semibold text-gray-800">R$ 0,00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Second Row - Table and Chart -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Table Column -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-2 md:mb-0">
+                            <i class="fas fa-list-ul mr-2 text-blue-600"></i> Lista de Títulos
+                        </h2>
+                        
+                        <div class="flex space-x-2">
+                            <div class="relative">
+                                <select id="statusFilter" class="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                    <option value="all">Todos os status</option>
+                                    <option value="Aguardando">Aguardando</option>
+                                    <option value="Quitado">Quitado</option>
+                                    <option value="Devolvido">Devolvido</option>
+                                    <option value="Repassado">Repassado</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="relative">
+                                <input type="text" id="searchInput" placeholder="Buscar..." class="pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-full md:w-64">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-2 text-gray-500">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 responsive-table">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimento</th>
+                                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="titlesTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Titles will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="emptyState" class="text-center py-12">
+                        <i class="fas fa-file-invoice-dollar text-4xl text-gray-300 mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-500">Nenhum título cadastrado</h3>
+                        <p class="text-gray-400 mt-1">Adicione seu primeiro título usando o botão "Novo Título"</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chart Column -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-6">
+                        <i class="fas fa-chart-pie mr-2 text-blue-600"></i> Distribuição por Status
+                    </h2>
+                    <div class="relative h-64">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Status Summary Cards -->
+                <div class="mt-6 space-y-4">
+                    <div class="bg-white rounded-lg shadow-md p-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">Resumo por Status</h3>
+                        
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center">
+                                    <span class="inline-block w-3 h-3 rounded-full bg-gray-400 mr-2"></span>
+                                    <span class="text-sm font-medium">Aguardando</span>
+                                </div>
+                                <div>
+                                    <span id="awaitingCount" class="text-sm font-medium">0</span>
+                                    <span class="text-xs text-gray-500 ml-1">(R$ <span id="awaitingAmount">0,00</span>)</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center">
+                                    <span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                                    <span class="text-sm font-medium">Quitado</span>
+                                </div>
+                                <div>
+                                    <span id="paidCount" class="text-sm font-medium">0</span>
+                                    <span class="text-xs text-gray-500 ml-1">(R$ <span id="paidAmount">0,00</span>)</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center">
+                                    <span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+                                    <span class="text-sm font-medium">Devolvido</span>
+                                </div>
+                                <div>
+                                    <span id="returnedCount" class="text-sm font-medium">0</span>
+                                    <span class="text-xs text-gray-500 ml-1">(R$ <span id="returnedAmount">0,00</span>)</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center">
+                                    <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                                    <span class="text-sm font-medium">Repassado</span>
+                                </div>
+                                <div>
+                                    <span id="forwardedCount" class="text-sm font-medium">0</span>
+                                    <span class="text-xs text-gray-500 ml-1">(R$ <span id="forwardedAmount">0,00</span>)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Title Modal -->
+    <div id="addTitleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Novo Título</h3>
+                <button id="closeAddModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="addTitleForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="addClientName" class="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
+                        <input type="text" id="addClientName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div>
+                        <label for="addOwnerName" class="block text-sm font-medium text-gray-700 mb-1">Proprietário *</label>
+                        <input type="text" id="addOwnerName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="addDocument" class="block text-sm font-medium text-gray-700 mb-1">CPF/CNPJ *</label>
+                        <input type="text" id="addDocument" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="000.000.000-00 ou 00.000.000/0000-00">
+                    </div>
+                    
+                    <div>
+                        <label for="addPhone" class="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                        <input type="text" id="addPhone" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="addAmount" class="block text-sm font-medium text-gray-700 mb-1">Valor *</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">R$</span>
+                            <input type="text" id="addAmount" required class="w-full pl-8 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0,00">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="addStatus" class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                        <select id="addStatus" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="Aguardando">Aguardando</option>
+                            <option value="Quitado">Quitado</option>
+                            <option value="Devolvido">Devolvido</option>
+                            <option value="Repassado">Repassado</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="datepicker">
+                        <label for="addEntryDate" class="block text-sm font-medium text-gray-700 mb-1">Data de Entrada</label>
+                        <input type="date" id="addEntryDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div class="datepicker">
+                        <label for="addDueDate" class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento *</label>
+                        <input type="date" id="addDueDate" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="addTitleInfo" class="block text-sm font-medium text-gray-700 mb-1">Informações do Título</label>
+                    <textarea id="addTitleInfo" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                </div>
+                
+                <div>
+                    <label for="addNotes" class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                    <textarea id="addNotes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" id="cancelAddBtn" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <i class="fas fa-save mr-1"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit Title Modal -->
+    <div id="editTitleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Editar Título</h3>
+                <button id="closeEditModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="editTitleForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="editClientName" class="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
+                        <input type="text" id="editClientName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div>
+                        <label for="editOwnerName" class="block text-sm font-medium text-gray-700 mb-1">Proprietário *</label>
+                        <input type="text" id="editOwnerName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="editDocument" class="block text-sm font-medium text-gray-700 mb-1">CPF/CNPJ *</label>
+                        <input type="text" id="editDocument" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="000.000.000-00 ou 00.000.000/0000-00">
+                    </div>
+                    
+                    <div>
+                        <label for="editPhone" class="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                        <input type="text" id="editPhone" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="editAmount" class="block text-sm font-medium text-gray-700 mb-1">Valor *</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">R$</span>
+                            <input type="text" id="editAmount" required class="w-full pl-8 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0,00">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="editStatus" class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                        <select id="editStatus" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="Aguardando">Aguardando</option>
+                            <option value="Quitado">Quitado</option>
+                            <option value="Devolvido">Devolvido</option>
+                            <option value="Repassado">Repassado</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="datepicker">
+                        <label for="editEntryDate" class="block text-sm font-medium text-gray-700 mb-1">Data de Entrada</label>
+                        <input type="date" id="editEntryDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div class="datepicker">
+                        <label for="editDueDate" class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento *</label>
+                        <input type="date" id="editDueDate" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="editTitleInfo" class="block text-sm font-medium text-gray-700 mb-1">Informações do Título</label>
+                    <textarea id="editTitleInfo" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                </div>
+                
+                <div>
+                    <label for="editNotes" class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                    <textarea id="editNotes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                </div>
+                
+                <input type="hidden" id="editTitleId">
+                
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" id="cancelEditBtn" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <i class="fas fa-save mr-1"></i> Atualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Status Change Modal -->
+    <div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Alterar Status</h3>
+                <button id="closeStatusModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <p class="text-gray-600">Selecione o novo status para este título:</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button data-status="Aguardando" class="status-option px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left">
+                    <span class="inline-block w-3 h-3 rounded-full bg-gray-400 mr-2"></span>
+                    Aguardando
+                </button>
+                
+                <button data-status="Quitado" class="status-option px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left">
+                    <span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                    Quitado
+                </button>
+                
+                <button data-status="Devolvido" class="status-option px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left">
+                    <span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+                    Devolvido
+                </button>
+                
+                <button data-status="Repassado" class="status-option px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left">
+                    <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                    Repassado
+                </button>
+            </div>
+            
+            <input type="hidden" id="currentTitleId">
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Confirmar Exclusão</h3>
+                <button id="closeConfirmModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <p class="text-gray-600">Tem certeza que deseja excluir este título? Esta ação não pode ser desfeita.</p>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button id="cancelDelete" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent">
+                    Cancelar
+                </button>
+                <button id="confirmDelete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                    <i class="fas fa-trash mr-1"></i> Excluir
+                </button>
+            </div>
+            
+            <input type="hidden" id="titleToDelete">
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const addTitleForm = document.getElementById('addTitleForm');
+            const editTitleForm = document.getElementById('editTitleForm');
+            const titlesTableBody = document.getElementById('titlesTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const addTitleModal = document.getElementById('addTitleModal');
+            const editTitleModal = document.getElementById('editTitleModal');
+            const statusModal = document.getElementById('statusModal');
+            const confirmModal = document.getElementById('confirmModal');
+            const statusOptions = document.querySelectorAll('.status-option');
+            const searchInput = document.getElementById('searchInput');
+            const statusFilter = document.getElementById('statusFilter');
+            const cancelAddBtn = document.getElementById('cancelAddBtn');
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const openAddModalBtn = document.getElementById('openAddModalBtn');
+            const closeAddModalBtn = document.getElementById('closeAddModalBtn');
+            const closeEditModalBtn = document.getElementById('closeEditModalBtn');
+            
+            // Chart variables
+            let statusChart;
+            
+            // Initialize the app
+            initApp();
+            
+            // Set today's date as default for entry date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('addEntryDate').value = today;
+            
+            // Event Listeners
+            addTitleForm.addEventListener('submit', handleAddTitleSubmit);
+            editTitleForm.addEventListener('submit', handleEditTitleSubmit);
+            cancelAddBtn.addEventListener('click', resetAddForm);
+            cancelEditBtn.addEventListener('click', () => editTitleModal.classList.add('hidden'));
+            openAddModalBtn.addEventListener('click', () => {
+                resetAddForm();
+                addTitleModal.classList.remove('hidden');
+            });
+            closeAddModalBtn.addEventListener('click', () => addTitleModal.classList.add('hidden'));
+            closeEditModalBtn.addEventListener('click', () => editTitleModal.classList.add('hidden'));
+            document.getElementById('closeStatusModal').addEventListener('click', () => statusModal.classList.add('hidden'));
+            document.getElementById('closeConfirmModal').addEventListener('click', () => confirmModal.classList.add('hidden'));
+            document.getElementById('cancelDelete').addEventListener('click', () => confirmModal.classList.add('hidden'));
+            document.getElementById('confirmDelete').addEventListener('click', deleteTitle);
+            searchInput.addEventListener('input', filterTitles);
+            statusFilter.addEventListener('change', filterTitles);
+            
+            // Add event listeners to status options
+            statusOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    const newStatus = this.getAttribute('data-status');
+                    updateTitleStatus(newStatus);
+                    statusModal.classList.add('hidden');
+                });
+            });
+            
+            // Input masks for add form
+            document.getElementById('addDocument').addEventListener('input', function(e) {
+                const value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length <= 11) {
+                    // CPF mask
+                    e.target.value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                } else {
+                    // CNPJ mask
+                    e.target.value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+                }
+            });
+            
+            document.getElementById('addPhone').addEventListener('input', function(e) {
+                const value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length <= 10) {
+                    // Phone without 9th digit
+                    e.target.value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                } else {
+                    // Phone with 9th digit
+                    e.target.value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                }
+            });
+            
+            document.getElementById('addAmount').addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                value = (value / 100).toFixed(2) + '';
+                value = value.replace('.', ',');
+                value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+                e.target.value = value;
+            });
+            
+            // Input masks for edit form
+            document.getElementById('editDocument').addEventListener('input', function(e) {
+                const value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length <= 11) {
+                    // CPF mask
+                    e.target.value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                } else {
+                    // CNPJ mask
+                    e.target.value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+                }
+            });
+            
+            document.getElementById('editPhone').addEventListener('input', function(e) {
+                const value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length <= 10) {
+                    // Phone without 9th digit
+                    e.target.value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                } else {
+                    // Phone with 9th digit
+                    e.target.value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                }
+            });
+            
+            document.getElementById('editAmount').addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                value = (value / 100).toFixed(2) + '';
+                value = value.replace('.', ',');
+                value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+                e.target.value = value;
+            });
+            
+            // Functions
+            function initApp() {
+                loadTitles();
+                updateDashboard();
+            }
+            
+            function loadTitles() {
+                const titles = getTitlesFromStorage();
+                
+                if (titles.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    titlesTableBody.innerHTML = '';
+                    return;
+                }
+                
+                emptyState.classList.add('hidden');
+                renderTitles(titles);
+            }
+            
+            function getTitlesFromStorage() {
+                const titlesJSON = localStorage.getItem('titles');
+                return titlesJSON ? JSON.parse(titlesJSON) : [];
+            }
+            
+            function saveTitlesToStorage(titles) {
+                localStorage.setItem('titles', JSON.stringify(titles));
+                updateDashboard();
+            }
+            
+            function renderTitles(titles) {
+                // Sort by entry date (newest first)
+                titles.sort((a, b) => new Date(b.entryDate) - new Date(a.entryDate));
+                
+                titlesTableBody.innerHTML = '';
+                
+                titles.forEach(title => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="px-4 py-4" data-label="Cliente">
+                            <div class="flex items-center">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">${title.clientName}</div>
+                                    <div class="text-sm text-gray-500">${title.ownerName}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4" data-label="Valor">
+                            <div class="text-sm font-medium text-gray-900">R$ ${formatCurrency(title.amount)}</div>
+                        </td>
+                        <td class="px-4 py-4" data-label="Status">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(title.status)}">
+                                ${title.status}
+                            </span>
+                        </td>
+                        <td class="px-4 py-4" data-label="Vencimento">
+                            <div class="text-sm text-gray-900">${formatDate(title.dueDate)}</div>
+                        </td>
+                        <td class="px-4 py-4 actions-cell" data-label="Ações">
+                            <div class="flex justify-end space-x-2">
+                                <button data-id="${title.id}" class="edit-btn p-1 text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button data-id="${title.id}" class="status-btn p-1 ${title.status === 'Quitado' ? 'text-green-600 hover:text-green-800' : title.status === 'Devolvido' ? 'text-red-600 hover:text-red-800' : title.status === 'Repassado' ? 'text-blue-600 hover:text-blue-800' : 'text-gray-600 hover:text-gray-800'}">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                                <button data-id="${title.id}" class="delete-btn p-1 text-red-600 hover:text-red-800">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    titlesTableBody.appendChild(row);
+                });
+                
+                // Add event listeners to action buttons
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        editTitle(this.getAttribute('data-id'));
+                    });
+                });
+                
+                document.querySelectorAll('.status-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        openStatusModal(this.getAttribute('data-id'));
+                    });
+                });
+                
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        openConfirmModal(this.getAttribute('data-id'));
+                    });
+                });
+            }
+            
+            function getStatusClass(status) {
+                switch(status) {
+                    case 'Aguardando': return 'status-aguardando';
+                    case 'Quitado': return 'status-quitado';
+                    case 'Devolvido': return 'status-devolvido';
+                    case 'Repassado': return 'status-repassado';
+                    default: return 'status-aguardando';
+                }
+            }
+            
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('pt-BR');
+            }
+            
+            function formatCurrency(value) {
+                return value.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+            }
+            
+            function handleAddTitleSubmit(e) {
+                e.preventDefault();
+                
+                const titleData = {
+                    clientName: document.getElementById('addClientName').value.trim(),
+                    ownerName: document.getElementById('addOwnerName').value.trim(),
+                    document: document.getElementById('addDocument').value.trim(),
+                    phone: document.getElementById('addPhone').value.trim(),
+                    amount: parseFloat(document.getElementById('addAmount').value.replace(/\./g, '').replace(',', '.')),
+                    entryDate: document.getElementById('addEntryDate').value,
+                    dueDate: document.getElementById('addDueDate').value,
+                    status: document.getElementById('addStatus').value,
+                    titleInfo: document.getElementById('addTitleInfo').value.trim(),
+                    notes: document.getElementById('addNotes').value.trim(),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                // Validate required fields
+                if (!titleData.clientName || !titleData.ownerName || !titleData.document || !titleData.amount || !titleData.dueDate) {
+                    alert('Por favor, preencha todos os campos obrigatórios.');
+                    return;
+                }
+                
+                let titles = getTitlesFromStorage();
+                
+                // Add new title
+                titleData.id = Date.now().toString();
+                titleData.createdAt = new Date().toISOString();
+                titles.unshift(titleData);
+                
+                saveTitlesToStorage(titles);
+                resetAddForm();
+                loadTitles();
+                addTitleModal.classList.add('hidden');
+            }
+            
+            function handleEditTitleSubmit(e) {
+                e.preventDefault();
+                
+                const titleId = document.getElementById('editTitleId').value;
+                const titleData = {
+                    clientName: document.getElementById('editClientName').value.trim(),
+                    ownerName: document.getElementById('editOwnerName').value.trim(),
+                    document: document.getElementById('editDocument').value.trim(),
+                    phone: document.getElementById('editPhone').value.trim(),
+                    amount: parseFloat(document.getElementById('editAmount').value.replace(/\./g, '').replace(',', '.')),
+                    entryDate: document.getElementById('editEntryDate').value,
+                    dueDate: document.getElementById('editDueDate').value,
+                    status: document.getElementById('editStatus').value,
+                    titleInfo: document.getElementById('editTitleInfo').value.trim(),
+                    notes: document.getElementById('editNotes').value.trim(),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                // Validate required fields
+                if (!titleData.clientName || !titleData.ownerName || !titleData.document || !titleData.amount || !titleData.dueDate) {
+                    alert('Por favor, preencha todos os campos obrigatórios.');
+                    return;
+                }
+                
+                let titles = getTitlesFromStorage();
+                
+                // Update existing title
+                const index = titles.findIndex(t => t.id === titleId);
+                if (index !== -1) {
+                    titleData.id = titleId;
+                    titleData.createdAt = titles[index].createdAt;
+                    titles[index] = titleData;
+                }
+                
+                saveTitlesToStorage(titles);
+                loadTitles();
+                editTitleModal.classList.add('hidden');
+            }
+            
+            function resetAddForm() {
+                addTitleForm.reset();
+                document.getElementById('addEntryDate').value = today;
+                document.getElementById('addStatus').value = 'Aguardando';
+            }
+            
+            function editTitle(id) {
+                const titles = getTitlesFromStorage();
+                const title = titles.find(t => t.id === id);
+                
+                if (title) {
+                    document.getElementById('editTitleId').value = title.id;
+                    document.getElementById('editClientName').value = title.clientName;
+                    document.getElementById('editOwnerName').value = title.ownerName;
+                    document.getElementById('editDocument').value = title.document;
+                    document.getElementById('editPhone').value = title.phone || '';
+                    document.getElementById('editAmount').value = formatCurrency(title.amount);
+                    document.getElementById('editEntryDate').value = title.entryDate;
+                    document.getElementById('editDueDate').value = title.dueDate;
+                    document.getElementById('editStatus').value = title.status;
+                    document.getElementById('editTitleInfo').value = title.titleInfo || '';
+                    document.getElementById('editNotes').value = title.notes || '';
+                    
+                    editTitleModal.classList.remove('hidden');
+                }
+            }
+            
+            function openStatusModal(id) {
+                document.getElementById('currentTitleId').value = id;
+                statusModal.classList.remove('hidden');
+            }
+            
+            function updateTitleStatus(newStatus) {
+                const id = document.getElementById('currentTitleId').value;
+                let titles = getTitlesFromStorage();
+                const index = titles.findIndex(t => t.id === id);
+                
+                if (index !== -1) {
+                    titles[index].status = newStatus;
+                    titles[index].updatedAt = new Date().toISOString();
+                    saveTitlesToStorage(titles);
+                    loadTitles();
+                }
+            }
+            
+            function openConfirmModal(id) {
+                document.getElementById('titleToDelete').value = id;
+                confirmModal.classList.remove('hidden');
+            }
+            
+            function deleteTitle() {
+                const id = document.getElementById('titleToDelete').value;
+                let titles = getTitlesFromStorage();
+                titles = titles.filter(t => t.id !== id);
+                
+                saveTitlesToStorage(titles);
+                confirmModal.classList.add('hidden');
+                loadTitles();
+            }
+            
+            function filterTitles() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const statusFilterValue = statusFilter.value;
+                let titles = getTitlesFromStorage();
+                
+                if (searchTerm || statusFilterValue !== 'all') {
+                    titles = titles.filter(title => {
+                        const matchesSearch = 
+                            title.clientName.toLowerCase().includes(searchTerm) ||
+                            title.ownerName.toLowerCase().includes(searchTerm) ||
+                            title.document.toLowerCase().includes(searchTerm) ||
+                            (title.phone && title.phone.toLowerCase().includes(searchTerm)) ||
+                            title.amount.toString().includes(searchTerm.replace(',', '.')) ||
+                            (title.titleInfo && title.titleInfo.toLowerCase().includes(searchTerm)) ||
+                            (title.notes && title.notes.toLowerCase().includes(searchTerm));
+                        
+                        const matchesStatus = statusFilterValue === 'all' || title.status === statusFilterValue;
+                        
+                        return matchesSearch && matchesStatus;
+                    });
+                }
+                
+                if (titles.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    titlesTableBody.innerHTML = '';
+                } else {
+                    emptyState.classList.add('hidden');
+                    renderTitles(titles);
+                }
+            }
+            
+            function updateDashboard() {
+                const titles = getTitlesFromStorage();
+                
+                // Filter out quitados for totals
+                const activeTitles = titles.filter(title => title.status !== 'Quitado');
+                
+                // Update total active titles
+                document.getElementById('totalTitles').textContent = activeTitles.length;
+                
+                // Update total active amount
+                const totalAmount = activeTitles.reduce((sum, title) => sum + title.amount, 0);
+                document.getElementById('totalAmount').textContent = `R$ ${formatCurrency(totalAmount)}`;
+                
+                // Count titles by status (including quitados for the chart)
+                const statusCounts = {
+                    Aguardando: 0,
+                    Quitado: 0,
+                    Devolvido: 0,
+                    Repassado: 0
+                };
+                
+                const statusAmounts = {
+                    Aguardando: 0,
+                    Quitado: 0,
+                    Devolvido: 0,
+                    Repassado: 0
+                };
+                
+                titles.forEach(title => {
+                    statusCounts[title.status]++;
+                    statusAmounts[title.status] += title.amount;
+                });
+                
+                // Update titles by status count (now just Aguardando)
+                document.getElementById('titlesByStatusCount').textContent = statusCounts.Aguardando;
+                
+                // Update amount by status (now just Aguardando)
+                document.getElementById('amountByStatus').textContent = `R$ ${formatCurrency(statusAmounts.Aguardando)}`;
+                
+                // Update status summary
+                document.getElementById('awaitingCount').textContent = statusCounts.Aguardando;
+                document.getElementById('awaitingAmount').textContent = formatCurrency(statusAmounts.Aguardando);
+                
+                document.getElementById('paidCount').textContent = statusCounts.Quitado;
+                document.getElementById('paidAmount').textContent = formatCurrency(statusAmounts.Quitado);
+                
+                document.getElementById('returnedCount').textContent = statusCounts.Devolvido;
+                document.getElementById('returnedAmount').textContent = formatCurrency(statusAmounts.Devolvido);
+                
+                document.getElementById('forwardedCount').textContent = statusCounts.Repassado;
+                document.getElementById('forwardedAmount').textContent = formatCurrency(statusAmounts.Repassado);
+                
+                // Update chart (pie chart) - only active titles (excluding quitados)
+                updateChart(activeTitles);
+            }
+            
+            function updateChart(activeTitles) {
+                const ctx = document.getElementById('statusChart').getContext('2d');
+                
+                // Count active titles by status
+                const statusCounts = {
+                    Aguardando: 0,
+                    Devolvido: 0,
+                    Repassado: 0
+                };
+                
+                activeTitles.forEach(title => {
+                    if (title.status in statusCounts) {
+                        statusCounts[title.status]++;
+                    }
+                });
+                
+                // Prepare data for chart
+                const labels = [];
+                const data = [];
+                const backgroundColors = [];
+                
+                if (statusCounts.Aguardando > 0) {
+                    labels.push('Aguardando');
+                    data.push(statusCounts.Aguardando);
+                    backgroundColors.push('rgba(156, 163, 175, 0.7)');
+                }
+                
+                if (statusCounts.Devolvido > 0) {
+                    labels.push('Devolvido');
+                    data.push(statusCounts.Devolvido);
+                    backgroundColors.push('rgba(239, 68, 68, 0.7)');
+                }
+                
+                if (statusCounts.Repassado > 0) {
+                    labels.push('Repassado');
+                    data.push(statusCounts.Repassado);
+                    backgroundColors.push('rgba(59, 130, 246, 0.7)');
+                }
+                
+                // Destroy previous chart if it exists
+                if (statusChart) {
+                    statusChart.destroy();
+                }
+                
+                // Only create chart if there's data to show
+                if (data.length > 0) {
+                    statusChart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: data,
+                                backgroundColor: backgroundColors,
+                                borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.label || '';
+                                            const value = context.raw || 0;
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = Math.round((value / total) * 100);
+                                            return `${label}: ${value} (${percentage}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    // Clear the canvas if no data
+                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
