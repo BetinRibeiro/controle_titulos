@@ -1,6 +1,6 @@
-# 📊 Controle de Títulos 02
+# 📊 Controle de Títulos
 
-**Controle de Títulos 02** é uma aplicação web simples e eficiente para gerenciamento de títulos financeiros, como boletos, duplicatas e cobranças. Desenvolvido com HTML, CSS e JavaScript puro, o sistema permite acompanhar o status de cada título, oferecendo uma visão clara e organizada das finanças.
+**Controle de Títulos** é uma aplicação web simples e eficiente para gerenciamento de títulos financeiros, como boletos, duplicatas e cobranças. Desenvolvido com HTML, CSS e JavaScript puro, o sistema permite acompanhar o status de cada título, oferecendo uma visão clara e organizada das finanças.
 
 🔗 **Acesse a ferramenta online:**  
 👉 [https://betinribeiro.github.io/controle_titulos_02](https://betinribeiro.github.io/controle_titulos_02)
