@@ -3,7 +3,7 @@
 **Controle de Títulos** é uma aplicação web simples e eficiente para gerenciamento de títulos financeiros, como boletos, duplicatas e cobranças. Desenvolvido com HTML, CSS e JavaScript puro, o sistema permite acompanhar o status de cada título, oferecendo uma visão clara e organizada das finanças.
 
 🔗 **Acesse a ferramenta online:**  
-👉 [https://betinribeiro.github.io/controle_titulos_02](https://betinribeiro.github.io/controle_titulos_02)
+👉 [https://betinribeiro.github.io/controle_titulos](https://betinribeiro.github.io/controle_titulos)
 
 ---
 
@@ -29,7 +29,7 @@
 ## 📂 Estrutura do Projeto
 
 ```
-controle_titulos_02/
+controle_titulos/
 ├── index.html
 ├── style.css
 ├── script.js
@@ -44,7 +44,7 @@ controle_titulos_02/
 
 1. **Clone o repositório:**
    ```bash
-   git clone https://github.com/BetinRibeiro/controle_titulos_02.git
+   git clone https://github.com/BetinRibeiro/controle_titulos.git
    ```
 
 2. **Abra o arquivo `index.html` no navegador:**
